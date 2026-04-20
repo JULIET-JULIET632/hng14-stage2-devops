@@ -2,8 +2,17 @@ import redis
 import time
 import os
 import signal
+def handle_shutdown(signum, frame):
+    print("Shutting down worker...")
+    exit(0)
 
-r = redis.Redis(host="localhost", port=6379)
+signal.signal(signal.SIGTERM, handle_shutdown)
+signal.signal(signal.SIGINT, handle_shutdown)
+r = redis.Redis(
+    host=os.environ.get("REDIS_HOST", "redis"),
+    port=int(os.environ.get("REDIS_PORT", 6379)),
+    password=os.environ.get("REDIS_PASSWORD")
+)
 
 def process_job(job_id):
     print(f"Processing job {job_id}")
