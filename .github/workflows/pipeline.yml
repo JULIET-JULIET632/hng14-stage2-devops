@@ -187,6 +187,10 @@ jobs:
 
       - name: Perform rolling update
         run: |
+          docker run -d --name redis_deploy \
+            -e REDIS_PASSWORD=testpassword123 \
+            redis:7-alpine redis-server --requirepass testpassword123
+
           docker build -t api:new ./api
           docker build -t worker:new ./worker
           docker build -t frontend:new ./frontend
@@ -195,13 +199,22 @@ jobs:
             echo "Rolling update for $SERVICE"
             OLD=$(docker ps -q --filter "name=${SERVICE}" | head -1)
 
-            docker run -d --name ${SERVICE}_new ${SERVICE}:new
+            if [ "$SERVICE" = "worker" ]; then
+              docker run -d --name ${SERVICE}_new \
+                --link redis_deploy:redis \
+                -e REDIS_HOST=redis \
+                -e REDIS_PORT=6379 \
+                -e REDIS_PASSWORD=testpassword123 \
+                ${SERVICE}:new
+            else
+              docker run -d --name ${SERVICE}_new ${SERVICE}:new
+            fi
 
             HEALTHY=false
-            for i in $(seq 1 16); do
+            for i in $(seq 1 6); do
               sleep 10
-              HEALTH=$(docker inspect --format='{{.State.Health.Status}}' ${SERVICE}_new 2>/dev/null || echo "none")
               STATUS=$(docker inspect --format='{{.State.Status}}' ${SERVICE}_new 2>/dev/null || echo "none")
+              HEALTH=$(docker inspect --format='{{.State.Health.Status}}' ${SERVICE}_new 2>/dev/null || echo "none")
               echo "$SERVICE status: $STATUS health: $HEALTH"
               if [ "$HEALTH" = "healthy" ]; then
                 HEALTHY=true
