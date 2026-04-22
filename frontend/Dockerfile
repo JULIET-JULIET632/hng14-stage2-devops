@@ -1,11 +1,11 @@
 # Build stage
-FROM node:18-slim AS builder
+FROM node:20-slim AS builder
 WORKDIR /app
 COPY package*.json .
 RUN npm install --omit=dev
 
 # Final stage
-FROM node:18-slim
+FROM node:20-slim
 WORKDIR /app
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
