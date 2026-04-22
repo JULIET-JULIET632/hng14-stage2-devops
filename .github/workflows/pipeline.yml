@@ -36,9 +36,9 @@ jobs:
 
       - name: Lint Dockerfiles
         run: |
-          hadolint api/Dockerfile
-          hadolint worker/Dockerfile
-          hadolint frontend/Dockerfile
+          hadolint --config .hadolint.yaml api/Dockerfile
+            hadolint --config .hadolint.yaml worker/Dockerfile
+            hadolint --config .hadolint.yaml frontend/Dockerfile
 
       - name: Install frontend dependencies
         run: cd frontend && npm install
