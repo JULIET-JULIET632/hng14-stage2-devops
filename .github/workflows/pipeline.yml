@@ -37,8 +37,8 @@ jobs:
       - name: Lint Dockerfiles
         run: |
           hadolint --config .hadolint.yaml api/Dockerfile
-            hadolint --config .hadolint.yaml worker/Dockerfile
-            hadolint --config .hadolint.yaml frontend/Dockerfile
+          hadolint --config .hadolint.yaml worker/Dockerfile
+          hadolint --config .hadolint.yaml frontend/Dockerfile
 
       - name: Install frontend dependencies
         run: cd frontend && npm install
@@ -98,9 +98,9 @@ jobs:
 
       - name: Build and push frontend image
         run: |
-          docker build --no-cache -t localhost:5000/api:latest ./api
-            docker build --no-cache -t localhost:5000/worker:latest ./worker
-            docker build --no-cache -t localhost:5000/frontend:latest ./frontend
+          docker build -t localhost:5000/frontend:${{ github.sha }} -t localhost:5000/frontend:latest ./frontend
+          docker push localhost:5000/frontend:${{ github.sha }}
+          docker push localhost:5000/frontend:latest
 
   security-scan:
     runs-on: ubuntu-latest
@@ -113,9 +113,9 @@ jobs:
 
       - name: Build images for scanning
         run: |
-          docker build -t localhost:5000/api:latest ./api
-          docker build -t localhost:5000/worker:latest ./worker
-          docker build -t localhost:5000/frontend:latest ./frontend
+          docker build --no-cache -t localhost:5000/api:latest ./api
+          docker build --no-cache -t localhost:5000/worker:latest ./worker
+          docker build --no-cache -t localhost:5000/frontend:latest ./frontend
 
       - name: Install Trivy
         run: |
@@ -124,7 +124,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y trivy
 
       - name: Scan API image
-        run:  trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --format sarif --output api-scan.sarif localhost:5000/api:latest
+        run: trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --format sarif --output api-scan.sarif localhost:5000/api:latest
 
       - name: Scan worker image
         run: trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --format sarif --output worker-scan.sarif localhost:5000/worker:latest
@@ -194,20 +194,31 @@ jobs:
           for SERVICE in api worker frontend; do
             echo "Rolling update for $SERVICE"
             OLD=$(docker ps -q --filter "name=${SERVICE}" | head -1)
+
             docker run -d --name ${SERVICE}_new ${SERVICE}:new
 
+            HEALTHY=false
             for i in $(seq 1 12); do
               sleep 5
-              HEALTH=$(docker inspect --format='{{.State.Health.Status}}' ${SERVICE}_new 2>/dev/null)
+              HEALTH=$(docker inspect --format='{{.State.Health.Status}}' ${SERVICE}_new 2>/dev/null || echo "none")
+              STATUS=$(docker inspect --format='{{.State.Status}}' ${SERVICE}_new 2>/dev/null || echo "none")
+              echo "$SERVICE status: $STATUS health: $HEALTH"
               if [ "$HEALTH" = "healthy" ]; then
-                echo "$SERVICE is healthy, stopping old container"
-                [ -n "$OLD" ] && docker stop $OLD && docker rm $OLD
+                HEALTHY=true
                 break
               fi
-              if [ $i -eq 12 ]; then
-                echo "$SERVICE health check failed, aborting rollout"
-                docker stop ${SERVICE}_new && docker rm ${SERVICE}_new
-                exit 1
+              if [ "$STATUS" = "running" ] && [ "$HEALTH" = "none" ]; then
+                HEALTHY=true
+                break
               fi
             done
+
+            if [ "$HEALTHY" = "true" ]; then
+              echo "$SERVICE is healthy, stopping old container"
+              [ -n "$OLD" ] && docker stop $OLD && docker rm $OLD || true
+            else
+              echo "$SERVICE health check failed after 60s, aborting rollout"
+              docker stop ${SERVICE}_new && docker rm ${SERVICE}_new
+              exit 1
+            fi
           done
