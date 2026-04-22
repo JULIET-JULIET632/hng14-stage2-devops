@@ -198,8 +198,8 @@ jobs:
             docker run -d --name ${SERVICE}_new ${SERVICE}:new
 
             HEALTHY=false
-            for i in $(seq 1 12); do
-              sleep 5
+            for i in $(seq 1 16); do
+              sleep 10
               HEALTH=$(docker inspect --format='{{.State.Health.Status}}' ${SERVICE}_new 2>/dev/null || echo "none")
               STATUS=$(docker inspect --format='{{.State.Status}}' ${SERVICE}_new 2>/dev/null || echo "none")
               echo "$SERVICE status: $STATUS health: $HEALTH"

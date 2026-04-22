@@ -13,6 +13,6 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/pytho
 COPY . .
 RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
   CMD pgrep -f worker.py || exit 1
 CMD ["python", "worker.py"]
