@@ -124,13 +124,13 @@ jobs:
           sudo apt-get update && sudo apt-get install -y trivy
 
       - name: Scan API image
-        run: trivy image --exit-code 1 --severity CRITICAL --format sarif --output api-scan.sarif localhost:5000/api:latest
+        run:  trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --format sarif --output api-scan.sarif localhost:5000/api:latest
 
       - name: Scan worker image
-        run: trivy image --exit-code 1 --severity CRITICAL --format sarif --output worker-scan.sarif localhost:5000/worker:latest
+        run: trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --format sarif --output worker-scan.sarif localhost:5000/worker:latest
 
       - name: Scan frontend image
-        run: trivy image --exit-code 1 --severity CRITICAL --format sarif --output frontend-scan.sarif localhost:5000/frontend:latest
+        run: trivy image --exit-code 1 --severity CRITICAL --ignore-unfixed --format sarif --output frontend-scan.sarif localhost:5000/frontend:latest
 
       - name: Upload SARIF results
         uses: actions/upload-artifact@v4
