@@ -12,11 +12,24 @@ def handle_shutdown(signum, frame):
 signal.signal(signal.SIGTERM, handle_shutdown)
 signal.signal(signal.SIGINT, handle_shutdown)
 
-r = redis.Redis(
-    host=os.environ.get("REDIS_HOST", "redis"),
-    port=int(os.environ.get("REDIS_PORT", 6379)),
-    password=os.environ.get("REDIS_PASSWORD")
-)
+
+def get_redis_connection():
+    while True:
+        try:
+            r = redis.Redis(
+                host=os.environ.get("REDIS_HOST", "redis"),
+                port=int(os.environ.get("REDIS_PORT", 6379)),
+                password=os.environ.get("REDIS_PASSWORD")
+            )
+            r.ping()
+            print("Connected to Redis")
+            return r
+        except Exception as e:
+            print(f"Redis not available: {e}, retrying in 2s...")
+            time.sleep(2)
+
+
+r = get_redis_connection()
 
 
 def process_job(job_id):
