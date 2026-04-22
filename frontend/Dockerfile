@@ -7,6 +7,7 @@ RUN npm install --omit=dev
 # Final stage
 FROM node:22-alpine
 WORKDIR /app
+# hadolint ignore=DL3018
 RUN apk add --no-cache curl
 COPY --from=builder /app/node_modules ./node_modules
 COPY . .
