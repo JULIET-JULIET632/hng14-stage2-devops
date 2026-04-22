@@ -44,10 +44,10 @@ jobs:
         run: cd frontend && npm install
 
       - name: Install ESLint
-        run: run: run: cd frontend && npm install eslint@8 --save-dev
+        run: cd frontend && npm install eslint@8 --save-dev
 
       - name: Lint JavaScript
-        run: run: cd frontend && npx eslint app.js
+        run: cd frontend && npx eslint app.js
 
   test:
     runs-on: ubuntu-latest
